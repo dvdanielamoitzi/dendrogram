@@ -49,6 +49,10 @@
     "webpack:prod": "visyn_scripts build --mode production --env workspace_mode=single"
   },
   "dependencies": {
+    "@inlet/react-pixi": "6.8.0",
+    "@types/d3-hierarchy": "3.1.0",
+    "d3-hierarchy": "3.1.2",
+    "pixi.js": "6.5.5",
     "visyn_core": "git+ssh://git@github.com:datavisyn/visyn_core#develop",
     "visyn_scripts": "git+ssh://git@github.com/datavisyn/visyn_scripts#develop"
   },
@@ -56,10 +60,10 @@
     "cypress": "^12.0.1"
   },
   "resolutions": {
-    "@types/react": "^16.9.23",
-    "@types/react-dom": "^16.9.5",
-    "react": "^16.13.0",
-    "react-dom": "^16.13.0"
+    "@types/react": "17.0.2",
+    "@types/react-dom": "17.0.2",
+    "react": "17.0.2",
+    "react-dom": "17.0.2"
   },
   "visyn": {
     "entries": {
