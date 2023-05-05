@@ -16,7 +16,17 @@ const margin = {
   right: 20,
 };
 
-export function Minimap({ onBrush }: { onBrush: (xStart: number, xEnd: number) => void }) {
+export function Minimap({
+  setBrushStart,
+  setBrushEnd,
+  brushStart,
+  brushEnd,
+}: {
+  setBrushStart: (brushStart: number) => void;
+  setBrushEnd: (brushEnd: number) => void;
+  brushStart: number;
+  brushEnd: number;
+}) {
   const svgRef = useRef<SVGSVGElement | null>(null);
 
   const yScale = useMemo(() => {
@@ -35,15 +45,26 @@ export function Minimap({ onBrush }: { onBrush: (xStart: number, xEnd: number) =
     return usedData.map((p) => <DendogramPoint key={p.index} label={p.compoundNo} xPos={xScale(p.index)} yPos={yScale(p['2_finalEC50'])} />);
   }, [xScale, yScale]);
 
-  const convertBrushToScale = useCallback(
-    (xStart, xEnd) => {
-      if (!xStart && !xEnd) {
-        onBrush(null, null);
+  const convertBrushX1ToScale = useCallback(
+    (xStart) => {
+      if (!xStart) {
+        setBrushStart(null);
         return;
       }
-      onBrush(xScale.invert(xStart), xScale.invert(xEnd));
+      setBrushStart(xScale.invert(xStart));
     },
-    [xScale, onBrush],
+    [setBrushStart, xScale],
+  );
+
+  const convertBrushX2ToScale = useCallback(
+    (xEnd) => {
+      if (!xEnd) {
+        setBrushEnd(null);
+        return;
+      }
+      setBrushEnd(xScale.invert(xEnd));
+    },
+    [xScale, setBrushEnd],
   );
 
   // const mySvg = useMemo(() => {
@@ -63,7 +84,7 @@ export function Minimap({ onBrush }: { onBrush: (xStart: number, xEnd: number) =
   return (
     <svg height={300} width="2000px">
       {points}
-      <Brush onBrush={convertBrushToScale} x={0} y={0} width={2000} height={300} />
+      <Brush onBrushX1={setBrushStart} onBrushX2={setBrushEnd} x={0} y={0} width={2000} height={300} brushX1={brushStart} brushX2={brushEnd} />
     </svg>
   );
 }

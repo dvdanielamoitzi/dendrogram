@@ -22,16 +22,16 @@ const margin = {
 };
 
 export function Scatterplot() {
-  const [brushedArea, setBrushedArea] = useState<[number, number]>(null);
-
-  const onBrush = useCallback((xStart, xEnd) => setBrushedArea([xStart, xEnd]), []);
+  // const [brushedArea, setBrushedArea] = useState<[number, number]>([null, null]);
+  const [brushStart, setBrushStart] = useState<number>(null);
+  const [brushEnd, setBrushEnd] = useState<number>(null);
 
   const xScale = useMemo(() => {
     return d3
       .scaleLinear()
       .range([0, width])
-      .domain(brushedArea && brushedArea[0] !== null && brushedArea[1] !== null ? brushedArea : [0, dendogramData.length]);
-  }, [brushedArea]);
+      .domain(brushStart && brushEnd ? [brushStart, brushEnd] : [0, dendogramData.length]);
+  }, [brushEnd, brushStart]);
 
   const yScale = useMemo(() => {
     return d3
@@ -57,8 +57,8 @@ export function Scatterplot() {
 
   return (
     <div>
-      <Minimap onBrush={onBrush} />
-      <Dendogram brushArea={brushedArea} xScale={xScale} />
+      <Minimap setBrushStart={setBrushStart} setBrushEnd={setBrushEnd} brushStart={brushStart} brushEnd={brushEnd} />
+      <Dendogram brushStart={brushStart} brushEnd={brushEnd} setBrushStart={setBrushStart} setBrushEnd={setBrushEnd} xScale={xScale} />
       <Stage
         width={width}
         height={height}

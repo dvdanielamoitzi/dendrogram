@@ -24,31 +24,44 @@ function DFS(
   node: d3.HierarchyNode<ITree>,
   g: PIXI.Graphics,
   xScale: d3.ScaleLinear<number, number>,
-  brushArea: [number, number],
+  brushStart,
+  brushEnd,
   yScale: d3.ScaleLinear<number, number>,
 ) {
   const yPosition = node.children ? yScale(node.depth) : yScale(yScale.domain()[1]);
-  if (brushArea === null || brushArea[0] === null || brushArea[1] === null) {
+  if (brushStart || brushEnd) {
     // @ts-ignore
     g.drawCircle(xScale(node.x), yPosition, DOT_SIZE);
     // @ts-ignore
-  } else if (node.x > brushArea[0] && node.x < brushArea[1]) {
+  } else if (node.x > brushStart && node.x < brushEnd) {
     // @ts-ignore
     g.drawCircle(xScale(node.x), yPosition, DOT_SIZE);
   }
   if (node.children) {
-    for (let child of node.children) {
+    for (const child of node.children) {
       const yPositionChild = child.children ? yScale(child.depth) : yScale(yScale.domain()[1]);
       // @ts-ignore
       g.moveTo(xScale(node.x), yPosition).lineTo(xScale(child.x), yPosition);
       // @ts-ignore
       g.moveTo(xScale(child.x), yPosition).lineTo(xScale(child.x), yPositionChild);
 
-      DFS(child, g, xScale, brushArea, yScale);
+      DFS(child, g, xScale, brushStart, brushEnd, yScale);
     }
   }
 }
-export function Dendogram({ brushArea, xScale }: { brushArea: [number, number]; xScale: d3.ScaleLinear<number, number> }) {
+export function Dendogram({
+  brushStart,
+  brushEnd,
+  xScale,
+  setBrushStart,
+  setBrushEnd,
+}: {
+  brushStart: number;
+  brushEnd: number;
+  xScale: d3.ScaleLinear<number, number>;
+  setBrushStart: (xStart) => void;
+  setBrushEnd: (xEnd) => void;
+}) {
   const dendogramData = useMemo(() => {
     const myTree = parseNewick(newickStr);
 
@@ -71,17 +84,16 @@ export function Dendogram({ brushArea, xScale }: { brushArea: [number, number]; 
       .range([margin.top, height - margin.bottom])
       .domain([0, maxDepth]);
   }, [dendogramData]);
-  // console.log(parseNewick(newickStr));
 
   const draw = React.useCallback(
     (g: PIXI.Graphics) => {
       g.clear();
       g.lineStyle(1, 0x000000, 1);
       g.beginFill(0x000000, 1);
-      DFS(dendogramData, g, xScale, brushArea, yScale);
+      DFS(dendogramData, g, xScale, brushStart, brushEnd, yScale);
       g.endFill();
     },
-    [brushArea, dendogramData, xScale, yScale],
+    [brushEnd, brushStart, dendogramData, xScale, yScale],
   );
 
   const mask = new PIXI.Graphics();
@@ -99,9 +111,26 @@ export function Dendogram({ brushArea, xScale }: { brushArea: [number, number]; 
           antialias: true,
         }}
         onWheel={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
           // e.clientX;
           // e.deltaY;
-          console.log('---> ', e);
+          // onBrush()
+          const brushLength = brushEnd - brushStart;
+          const brushX1Percentage = (xScale.invert(e.clientX) - brushStart) / brushLength;
+          const brushX2Percentage = (brushEnd - xScale.invert(e.clientX)) / brushLength;
+          const newBrushX1 = brushStart - (e.deltaY / 10) * brushX1Percentage;
+          const newBrushX2 = brushEnd + (e.deltaY / 10) * brushX2Percentage;
+
+          if (newBrushX1 > newBrushX2) {
+            return;
+          }
+          if (newBrushX1 > 0) {
+            setBrushStart(newBrushX1);
+          }
+          if (newBrushX2 < dendogramDataRaw.length) {
+            setBrushEnd(newBrushX2);
+          }
         }}
       >
         {/* <Container pivot={[2000, 0]} position={[2000, 0]}> */}
