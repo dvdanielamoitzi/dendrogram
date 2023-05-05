@@ -14,22 +14,29 @@ import { newickStr } from '../newick_RANDOM_1';
 
 const height = 1000;
 const width = 2000;
+const margin = {
+  top: 20,
+  bottom: 20,
+  left: 20,
+  right: 20,
+};
 
 export function Scatterplot() {
   const [brushedArea, setBrushedArea] = useState<[number, number]>(null);
 
   const onBrush = useCallback((xStart, xEnd) => setBrushedArea([xStart, xEnd]), []);
+
   const xScale = useMemo(() => {
     return d3
       .scaleLinear()
       .range([0, width])
-      .domain(brushedArea || [0, dendogramData.length]);
+      .domain(brushedArea && brushedArea[0] !== null && brushedArea[1] !== null ? brushedArea : [0, dendogramData.length]);
   }, [brushedArea]);
 
   const yScale = useMemo(() => {
     return d3
       .scaleLinear()
-      .range([0, height])
+      .range([margin.top, height - margin.bottom])
       .domain([d3.max(dendogramData.map((d) => d['2_finalEC50'])), d3.min(dendogramData.map((d) => d['2_finalEC50']))]);
   }, []);
 
@@ -51,7 +58,7 @@ export function Scatterplot() {
   return (
     <div>
       <Minimap onBrush={onBrush} />
-      {/* <Dendogram /> */}
+      <Dendogram brushArea={brushedArea} xScale={xScale} />
       <Stage
         width={width}
         height={height}
@@ -80,6 +87,7 @@ export function Scatterplot() {
               );
             })}
         </ParticleContainer> */}
+        {/* actual scatterplot: */}
         <Graphics draw={draw} />
         {/* <SimpleMesh
           texture="https://s3-us-west-2.amazonaws.com/s.cdpn.io/693612/placeholder.png"

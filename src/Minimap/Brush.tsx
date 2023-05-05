@@ -56,7 +56,6 @@ export function Brush({
   const onMouseMove = useCallback(
     (e: React.MouseEvent<SVGRectElement, MouseEvent>) => {
       if (isDragging) {
-        console.log('dragging');
         if (Math.abs(brushStart - e.clientX) < 5) return;
         setIsMoving(true);
         if (e.clientX < brushX2) {
@@ -88,6 +87,8 @@ export function Brush({
 
   const onScroll = useCallback(
     (e: React.WheelEvent<SVGRectElement>) => {
+      e.preventDefault();
+      e.stopPropagation();
       _setBrushX1(brushX1 - e.deltaY / 10);
       _setBrushX2(brushX2 + e.deltaY / 10);
     },
@@ -95,7 +96,6 @@ export function Brush({
   );
 
   React.useEffect(() => {
-    console.log(brushX1, brushX2);
     onBrush(brushX1, brushX2);
   }, [brushX1, brushX2, onBrush]);
 

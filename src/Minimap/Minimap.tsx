@@ -9,13 +9,20 @@ import { Brush } from './Brush';
 import { dendogramData } from '../DendogramData';
 import { DendogramPoint } from './DendogramPoint';
 
+const margin = {
+  top: 20,
+  bottom: 20,
+  left: 20,
+  right: 20,
+};
+
 export function Minimap({ onBrush }: { onBrush: (xStart: number, xEnd: number) => void }) {
   const svgRef = useRef<SVGSVGElement | null>(null);
 
   const yScale = useMemo(() => {
     return d3
       .scaleLinear()
-      .range([0, 300])
+      .range([margin.top, 300 - margin.bottom])
       .domain([d3.max(dendogramData.map((d) => d['2_finalEC50'])), d3.min(dendogramData.map((d) => d['2_finalEC50']))]);
   }, []);
 
@@ -31,7 +38,7 @@ export function Minimap({ onBrush }: { onBrush: (xStart: number, xEnd: number) =
   const convertBrushToScale = useCallback(
     (xStart, xEnd) => {
       if (!xStart && !xEnd) {
-        onBrush(0, 2000);
+        onBrush(null, null);
         return;
       }
       onBrush(xScale.invert(xStart), xScale.invert(xEnd));
@@ -54,7 +61,7 @@ export function Minimap({ onBrush }: { onBrush: (xStart: number, xEnd: number) =
   // console.log(sprite.texture);
 
   return (
-    <svg height="300" width="2000px">
+    <svg height={300} width="2000px">
       {points}
       <Brush onBrush={convertBrushToScale} x={0} y={0} width={2000} height={300} />
     </svg>
