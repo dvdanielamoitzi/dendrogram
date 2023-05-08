@@ -1,10 +1,7 @@
 import * as React from 'react';
-import { ReactSVGElement, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-
-import ReactDOMServer from 'react-dom/server';
+import { useCallback, useMemo, useRef } from 'react';
 
 import * as d3 from 'd3v7';
-import * as PIXI from 'pixi.js';
 import { Brush } from './Brush';
 import { dendogramData } from '../DendogramData';
 import { DendogramPoint } from './DendogramPoint';
@@ -87,8 +84,6 @@ export function Minimap({
       <Brush
         onBrushX1={convertBrushX1ToScale}
         onBrushX2={convertBrushX2ToScale}
-        x={0}
-        y={0}
         width={2000}
         height={300}
         brushX1={xScale(brushStart)}

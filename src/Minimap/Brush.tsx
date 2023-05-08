@@ -1,12 +1,10 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import * as React from 'react';
-import { useCallback, useState, useRef, useEffect } from 'react';
+import { useCallback, useState, useRef } from 'react';
 import * as d3 from 'd3v7';
 import { useEvent } from 'visyn_core';
 
 export function Brush({
-  x,
-  y,
   width,
   height,
   onBrushX1,
@@ -14,8 +12,6 @@ export function Brush({
   brushX1,
   brushX2,
 }: {
-  x: number;
-  y: number;
   width: number;
   height: number;
   onBrushX1: (brushStart: number) => void;
@@ -59,18 +55,20 @@ export function Brush({
   );
 
   const onMouseMove = useEvent((e: React.MouseEvent<SVGRectElement, MouseEvent>) => {
+    if (Math.abs(brushStart - e.clientX) < 5) return;
+
     if (isDragging) {
-      if (Math.abs(brushStart - e.clientX) < 5) return;
       setIsMoving(true);
       if (e.clientX < brushStart) {
         _setBrushX1(e.clientX);
+        _setBrushX2(brushStart);
       } else {
+        _setBrushX1(brushStart);
         _setBrushX2(e.clientX);
       }
       // setBrushWidth(Math.abs(e.clientX - brushStart));
       // onBrush(brushX1, brushX2);
     } else if (isDraggingBrush) {
-      if (Math.abs(brushStart - e.clientX) < 5) return;
       if (e.clientX - brushStart + brushX1OnDragStart < 0) {
         _setBrushX1(0);
         _setBrushX2(brushX2OnDragStart - brushX1OnDragStart);
@@ -117,8 +115,8 @@ export function Brush({
       setIsDragging(true);
       setIsMoving(false);
       setBrushStart(e.clientX); // clientX is a problem --> use getboundingclientrect instead
-      _setBrushX1(e.clientX);
-      _setBrushX2(e.clientX);
+      // _setBrushX1(e.clientX);
+      // _setBrushX2(e.clientX);
       d3.select(window).on('mousemove', onMouseMove).on('mouseup', onMouseUp);
     },
     [_setBrushX1, _setBrushX2, onMouseMove, onMouseUp],

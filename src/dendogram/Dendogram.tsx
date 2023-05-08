@@ -3,14 +3,14 @@ import * as React from 'react';
 import * as PIXI from 'pixi.js';
 import * as d3 from 'd3v7';
 
-import { useMemo } from 'react';
+import { useMemo, useRef, useEffect } from 'react';
+import { useEvent } from 'visyn_core';
 import { dendogramData as dendogramDataRaw } from '../DendogramData';
 
 import { parseNewick } from '../newickParser';
 import { newickStr } from '../newick_RANDOM_1';
 import { ITree } from '../interfaces';
 
-const DOT_SIZE = 5;
 const margin = {
   top: 20,
   bottom: 20,
@@ -67,6 +67,7 @@ export function Dendogram({
   setBrushEnd: (xEnd) => void;
   pointSize: number;
 }) {
+  const canvasRef = useRef<HTMLDivElement>(null);
   const dendogramData = useMemo(() => {
     const myTree = parseNewick(newickStr);
 
@@ -104,38 +105,44 @@ export function Dendogram({
     [brushEnd, brushStart, dendogramData, pointSize, xScale, yScale],
   );
 
+  const wheelListener = useEvent((e: WheelEvent) => {
+    const brushLength = brushEnd - brushStart;
+    const brushX1Percentage = (xScale.invert(e.clientX) - brushStart) / brushLength;
+    const brushX2Percentage = (brushEnd - xScale.invert(e.clientX)) / brushLength;
+    const newBrushX1 = brushStart - (e.deltaY / 1000) * brushLength * brushX1Percentage;
+    const newBrushX2 = brushEnd + (e.deltaY / 1000) * brushLength * brushX2Percentage;
+
+    if (newBrushX1 > newBrushX2) {
+      return;
+    }
+    if (newBrushX1 > 0) {
+      setBrushStart(newBrushX1);
+    } else {
+      setBrushStart(0);
+    }
+    if (newBrushX2 < dendogramDataRaw.length) {
+      setBrushEnd(newBrushX2);
+    } else {
+      setBrushEnd(dendogramDataRaw.length);
+    }
+    e.stopPropagation();
+    e.preventDefault();
+  });
+
+  useEffect(() => {
+    if (canvasRef.current) {
+      canvasRef.current.addEventListener('wheel', wheelListener);
+    }
+  }, [wheelListener]);
+
   return (
-    <div>
+    <div ref={canvasRef}>
       <Stage
         width={2000}
         height={height}
         options={{
           backgroundColor: 0xeef1f5,
           antialias: true,
-        }}
-        onWheel={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-
-          const brushLength = brushEnd - brushStart;
-          const brushX1Percentage = (xScale.invert(e.clientX) - brushStart) / brushLength;
-          const brushX2Percentage = (brushEnd - xScale.invert(e.clientX)) / brushLength;
-          const newBrushX1 = brushStart - (e.deltaY / 1000) * brushLength * brushX1Percentage;
-          const newBrushX2 = brushEnd + (e.deltaY / 1000) * brushLength * brushX2Percentage;
-
-          if (newBrushX1 > newBrushX2) {
-            return;
-          }
-          if (newBrushX1 > 0) {
-            setBrushStart(newBrushX1);
-          } else {
-            setBrushStart(0);
-          }
-          if (newBrushX2 < dendogramDataRaw.length) {
-            setBrushEnd(newBrushX2);
-          } else {
-            setBrushEnd(dendogramDataRaw.length);
-          }
         }}
       >
         <Graphics draw={draw} />
