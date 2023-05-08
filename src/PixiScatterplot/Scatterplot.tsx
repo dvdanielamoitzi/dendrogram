@@ -1,6 +1,5 @@
 import { Stage, Graphics, SimpleMesh, ParticleContainer } from '@inlet/react-pixi';
 import * as React from 'react';
-import '../styles.css';
 import * as PIXI from 'pixi.js';
 import * as d3 from 'd3v7';
 import { useCallback, useMemo, useState } from 'react';
@@ -26,11 +25,22 @@ export function Scatterplot() {
   const [brushStart, setBrushStart] = useState<number>(null);
   const [brushEnd, setBrushEnd] = useState<number>(null);
 
+  const circleScale = useMemo(() => {
+    return d3.scaleLinear().range([2, 5]).domain([1, 0]);
+  }, []);
+
+  const zoomLevel = useMemo(() => {
+    if (brushStart !== null && brushEnd !== null) {
+      return (brushEnd - brushStart) / dendogramData.length;
+    }
+    return 1;
+  }, [brushEnd, brushStart]);
+
   const xScale = useMemo(() => {
     return d3
       .scaleLinear()
       .range([0, width])
-      .domain(brushStart && brushEnd ? [brushStart, brushEnd] : [0, dendogramData.length]);
+      .domain(brushStart !== null && brushEnd !== null ? [brushStart, brushEnd] : [0, dendogramData.length]);
   }, [brushEnd, brushStart]);
 
   const yScale = useMemo(() => {
@@ -48,17 +58,24 @@ export function Scatterplot() {
       dendogramData
         .filter((d) => d.index >= xScale.domain()[0] && d.index <= xScale.domain()[1])
         .forEach((d) => {
-          g.drawCircle(xScale(d.index), yScale(d['2_finalEC50']), 2);
+          g.drawCircle(xScale(d.index), yScale(d['2_finalEC50']), circleScale(zoomLevel));
         });
       g.endFill();
     },
-    [xScale, yScale],
+    [circleScale, xScale, yScale, zoomLevel],
   );
 
   return (
     <div>
       <Minimap setBrushStart={setBrushStart} setBrushEnd={setBrushEnd} brushStart={brushStart} brushEnd={brushEnd} />
-      <Dendogram brushStart={brushStart} brushEnd={brushEnd} setBrushStart={setBrushStart} setBrushEnd={setBrushEnd} xScale={xScale} />
+      <Dendogram
+        brushStart={brushStart}
+        brushEnd={brushEnd}
+        setBrushStart={setBrushStart}
+        setBrushEnd={setBrushEnd}
+        xScale={xScale}
+        pointSize={circleScale(zoomLevel)}
+      />
       <Stage
         width={width}
         height={height}
@@ -67,33 +84,7 @@ export function Scatterplot() {
           antialias: true,
         }}
       >
-        {/* <ParticleContainer position={[0, 0]} properties={{ position: true }}>
-          {dendogramData
-            .filter(
-              (d) =>
-                d.index >= xScale.domain()[0] && d.index <= xScale.domain()[1]
-            )
-            .map((d) => {
-              return (
-                <Graphics
-                  x={xScale(d.index)}
-                  y={yScale(d["2_finalEC50"])}
-                  draw={(g) => {
-                    g.beginFill(0x000000, 1);
-                    g.drawCircle(0, 0, 2);
-                    g.endFill();
-                  }}
-                />
-              );
-            })}
-        </ParticleContainer> */}
-        {/* actual scatterplot: */}
         <Graphics draw={draw} />
-        {/* <SimpleMesh
-          texture="https://s3-us-west-2.amazonaws.com/s.cdpn.io/693612/placeholder.png"
-          drawMode={PIXI.DRAW_MODES.TRIANGLES}
-        /> */}
-        {/* <AppConsumer>{(app) => <Plane app={app} />}</AppConsumer> */}
       </Stage>
     </div>
   );

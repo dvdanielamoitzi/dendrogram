@@ -1,6 +1,5 @@
 import { Stage, Graphics } from '@inlet/react-pixi';
 import * as React from 'react';
-import '../styles.css';
 import * as PIXI from 'pixi.js';
 import * as d3 from 'd3v7';
 
@@ -27,16 +26,10 @@ function DFS(
   brushStart,
   brushEnd,
   yScale: d3.ScaleLinear<number, number>,
+  pointSize: number,
 ) {
   const yPosition = node.children ? yScale(node.depth) : yScale(yScale.domain()[1]);
-  if (brushStart || brushEnd) {
-    // @ts-ignore
-    g.drawCircle(xScale(node.x), yPosition, DOT_SIZE);
-    // @ts-ignore
-  } else if (node.x > brushStart && node.x < brushEnd) {
-    // @ts-ignore
-    g.drawCircle(xScale(node.x), yPosition, DOT_SIZE);
-  }
+
   if (node.children) {
     for (const child of node.children) {
       const yPositionChild = child.children ? yScale(child.depth) : yScale(yScale.domain()[1]);
@@ -45,29 +38,44 @@ function DFS(
       // @ts-ignore
       g.moveTo(xScale(child.x), yPosition).lineTo(xScale(child.x), yPositionChild);
 
-      DFS(child, g, xScale, brushStart, brushEnd, yScale);
+      DFS(child, g, xScale, brushStart, brushEnd, yScale, pointSize);
     }
   }
+
+  if (!brushStart || !brushEnd) {
+    // @ts-ignore
+    g.drawCircle(xScale(node.x), yPosition, pointSize);
+    // @ts-ignore
+  } else if (node.x > brushStart && node.x < brushEnd) {
+    // @ts-ignore
+    g.drawCircle(xScale(node.x), yPosition, pointSize);
+  }
 }
+
 export function Dendogram({
   brushStart,
   brushEnd,
   xScale,
   setBrushStart,
   setBrushEnd,
+  pointSize,
 }: {
   brushStart: number;
   brushEnd: number;
   xScale: d3.ScaleLinear<number, number>;
   setBrushStart: (xStart) => void;
   setBrushEnd: (xEnd) => void;
+  pointSize: number;
 }) {
   const dendogramData = useMemo(() => {
     const myTree = parseNewick(newickStr);
 
     const hierarchy = d3.hierarchy(myTree);
 
-    const dendogramCluster = d3.cluster<ITree>().size([dendogramDataRaw.length, height]);
+    const dendogramCluster = d3
+      .cluster<ITree>()
+      .size([dendogramDataRaw.length, height])
+      .separation((a, b) => 1);
 
     return dendogramCluster(hierarchy);
   }, []);
@@ -88,18 +96,13 @@ export function Dendogram({
   const draw = React.useCallback(
     (g: PIXI.Graphics) => {
       g.clear();
-      g.lineStyle(1, 0x000000, 1);
+      g.lineStyle(1, 0x808080, 1);
       g.beginFill(0x000000, 1);
-      DFS(dendogramData, g, xScale, brushStart, brushEnd, yScale);
+      DFS(dendogramData, g, xScale, brushStart, brushEnd, yScale, pointSize);
       g.endFill();
     },
-    [brushEnd, brushStart, dendogramData, xScale, yScale],
+    [brushEnd, brushStart, dendogramData, pointSize, xScale, yScale],
   );
-
-  const mask = new PIXI.Graphics();
-  mask.beginFill(0xff3300);
-  mask.drawRect(0, 0, 2000, height);
-  mask.endFill();
 
   return (
     <div>
@@ -113,29 +116,29 @@ export function Dendogram({
         onWheel={(e) => {
           e.preventDefault();
           e.stopPropagation();
-          // e.clientX;
-          // e.deltaY;
-          // onBrush()
+
           const brushLength = brushEnd - brushStart;
           const brushX1Percentage = (xScale.invert(e.clientX) - brushStart) / brushLength;
           const brushX2Percentage = (brushEnd - xScale.invert(e.clientX)) / brushLength;
-          const newBrushX1 = brushStart - (e.deltaY / 10) * brushX1Percentage;
-          const newBrushX2 = brushEnd + (e.deltaY / 10) * brushX2Percentage;
+          const newBrushX1 = brushStart - (e.deltaY / 1000) * brushLength * brushX1Percentage;
+          const newBrushX2 = brushEnd + (e.deltaY / 1000) * brushLength * brushX2Percentage;
 
           if (newBrushX1 > newBrushX2) {
             return;
           }
           if (newBrushX1 > 0) {
             setBrushStart(newBrushX1);
+          } else {
+            setBrushStart(0);
           }
           if (newBrushX2 < dendogramDataRaw.length) {
             setBrushEnd(newBrushX2);
+          } else {
+            setBrushEnd(dendogramDataRaw.length);
           }
         }}
       >
-        {/* <Container pivot={[2000, 0]} position={[2000, 0]}> */}
         <Graphics draw={draw} />
-        {/* </Container> */}
       </Stage>
     </div>
   );

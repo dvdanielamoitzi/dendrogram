@@ -1,6 +1,8 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import * as React from 'react';
-import { useCallback, useState, useMemo } from 'react';
+import { useCallback, useState, useRef, useEffect } from 'react';
+import * as d3 from 'd3v7';
+import { useEvent } from 'visyn_core';
 
 export function Brush({
   x,
@@ -23,6 +25,7 @@ export function Brush({
   brushX2: number;
 }) {
   // const [brushWidth, setBrushWidth] = useState<number>(0);
+  const brushRef = useRef<SVGRectElement>(null);
   const [brushStart, setBrushStart] = useState<number>(0);
   // const [brushX1, setBrushX1] = useState<number>(0);
   // const [brushX2, setBrushX2] = useState<number>(0);
@@ -46,47 +49,79 @@ export function Brush({
 
   const _setBrushX2 = useCallback(
     (x2: number) => {
-      if (x2 < 0) {
-        onBrushX2(0);
+      if (x2 > width) {
+        onBrushX2(width);
       } else {
         onBrushX2(x2);
       }
     },
-    [onBrushX2],
+    [onBrushX2, width],
   );
+
+  const onMouseMove = useEvent((e: React.MouseEvent<SVGRectElement, MouseEvent>) => {
+    if (isDragging) {
+      if (Math.abs(brushStart - e.clientX) < 5) return;
+      setIsMoving(true);
+      if (e.clientX < brushStart) {
+        _setBrushX1(e.clientX);
+      } else {
+        _setBrushX2(e.clientX);
+      }
+      // setBrushWidth(Math.abs(e.clientX - brushStart));
+      // onBrush(brushX1, brushX2);
+    } else if (isDraggingBrush) {
+      if (Math.abs(brushStart - e.clientX) < 5) return;
+      if (e.clientX - brushStart + brushX1OnDragStart < 0) {
+        _setBrushX1(0);
+        _setBrushX2(brushX2OnDragStart - brushX1OnDragStart);
+        return;
+      }
+      if (e.clientX - brushStart + brushX2OnDragStart > width) {
+        _setBrushX1(width - (brushX2OnDragStart - brushX1OnDragStart));
+        _setBrushX2(width);
+        return;
+      }
+
+      setIsMoving(true);
+      _setBrushX1(e.clientX - brushStart + brushX1OnDragStart);
+      _setBrushX2(e.clientX - brushStart + brushX2OnDragStart);
+    }
+  });
+
+  const onScroll = useCallback(
+    (e: React.WheelEvent<SVGRectElement>) => {
+      e.stopPropagation();
+      _setBrushX1(brushX1 - e.deltaY / 10);
+      _setBrushX2(brushX2 + e.deltaY / 10);
+    },
+    [_setBrushX1, brushX1, _setBrushX2, brushX2],
+  );
+
+  const onMouseUp = useEvent(() => {
+    if (!isMoving) {
+      _setBrushX1(null);
+      _setBrushX2(null);
+    }
+
+    d3.select(window).on('mousemove', null).on('mouseup', null);
+
+    setIsDragging(false);
+    setIsDraggingBrush(false);
+    setIsMoving(false);
+  });
 
   const onMouseDown = useCallback(
     (e: React.MouseEvent<SVGRectElement, MouseEvent>) => {
       // setBrushWidth(0);
+
       setIsDragging(true);
       setIsMoving(false);
       setBrushStart(e.clientX); // clientX is a problem --> use getboundingclientrect instead
       _setBrushX1(e.clientX);
       _setBrushX2(e.clientX);
+      d3.select(window).on('mousemove', onMouseMove).on('mouseup', onMouseUp);
     },
-    [_setBrushX1, _setBrushX2],
-  );
-
-  const onMouseMove = useCallback(
-    (e: React.MouseEvent<SVGRectElement, MouseEvent>) => {
-      if (isDragging) {
-        if (Math.abs(brushStart - e.clientX) < 5) return;
-        setIsMoving(true);
-        if (e.clientX < brushX2) {
-          _setBrushX1(e.clientX);
-        } else {
-          _setBrushX2(e.clientX);
-        }
-        // setBrushWidth(Math.abs(e.clientX - brushStart));
-        // onBrush(brushX1, brushX2);
-      } else if (isDraggingBrush) {
-        if (Math.abs(brushStart - e.clientX) < 5) return;
-        setIsMoving(true);
-        _setBrushX1(e.clientX - brushStart + brushX1OnDragStart);
-        _setBrushX2(e.clientX - brushStart + brushX2OnDragStart);
-      }
-    },
-    [isDragging, isDraggingBrush, brushStart, brushX2, _setBrushX1, _setBrushX2, brushX1OnDragStart, brushX2OnDragStart],
+    [_setBrushX1, _setBrushX2, onMouseMove, onMouseUp],
   );
 
   const onBrushClick = useCallback(
@@ -95,44 +130,15 @@ export function Brush({
       setBrushX1OnDragStart(brushX1);
       setBrushX2OnDragStart(brushX2);
       setBrushStart(e.clientX);
+      d3.select(window).on('mousemove', onMouseMove).on('mouseup', onMouseUp);
     },
-    [brushX1, brushX2],
+    [brushX1, brushX2, onMouseMove, onMouseUp],
   );
-
-  const onScroll = useCallback(
-    (e: React.WheelEvent<SVGRectElement>) => {
-      e.preventDefault();
-      e.stopPropagation();
-      _setBrushX1(brushX1 - e.deltaY / 10);
-      _setBrushX2(brushX2 + e.deltaY / 10);
-    },
-    [_setBrushX1, brushX1, _setBrushX2, brushX2],
-  );
-
-  const onMouseUp = useCallback(() => {
-    if (!isMoving) {
-      _setBrushX1(null);
-      _setBrushX2(null);
-    }
-    setIsDragging(false);
-    setIsDraggingBrush(false);
-    setIsMoving(false);
-  }, [_setBrushX1, _setBrushX2, isMoving]);
 
   return (
     <>
-      <rect width={width} height={height} opacity="0" fill="white" onMouseDown={onMouseDown} onMouseMove={onMouseMove} onMouseUp={onMouseUp} />
-      <rect
-        width={(brushX2 || 0) - (brushX1 || 0)}
-        height={height}
-        x={brushX1 || 0}
-        opacity=".2"
-        fill="black"
-        onMouseDown={onBrushClick}
-        onMouseMove={onMouseMove}
-        onMouseUp={onMouseUp}
-        onWheel={onScroll}
-      />
+      <rect ref={brushRef} width={width} height={height} opacity="0" fill="white" onMouseDown={onMouseDown} />
+      <rect width={(brushX2 || 0) - (brushX1 || 0)} height={height} x={brushX1 || 0} opacity=".2" fill="black" onMouseDown={onBrushClick} onWheel={onScroll} />
     </>
   );
 }

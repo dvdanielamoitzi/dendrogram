@@ -47,7 +47,7 @@ export function Minimap({
 
   const convertBrushX1ToScale = useCallback(
     (xStart) => {
-      if (!xStart) {
+      if (xStart === null) {
         setBrushStart(null);
         return;
       }
@@ -58,7 +58,7 @@ export function Minimap({
 
   const convertBrushX2ToScale = useCallback(
     (xEnd) => {
-      if (!xEnd) {
+      if (xEnd === null) {
         setBrushEnd(null);
         return;
       }
@@ -84,7 +84,16 @@ export function Minimap({
   return (
     <svg height={300} width="2000px">
       {points}
-      <Brush onBrushX1={setBrushStart} onBrushX2={setBrushEnd} x={0} y={0} width={2000} height={300} brushX1={brushStart} brushX2={brushEnd} />
+      <Brush
+        onBrushX1={convertBrushX1ToScale}
+        onBrushX2={convertBrushX2ToScale}
+        x={0}
+        y={0}
+        width={2000}
+        height={300}
+        brushX1={xScale(brushStart)}
+        brushX2={xScale(brushEnd)}
+      />
     </svg>
   );
 }
